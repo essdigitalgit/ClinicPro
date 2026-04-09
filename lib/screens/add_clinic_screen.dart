@@ -29,32 +29,26 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final provider = context.read<ClinicProvider>();
-    final error = await provider.addClinic(
+    await context.read<ClinicProvider>().addClinic(
       name: _nameController.text.trim(),
       address: _addressController.text.trim(),
       phone: _phoneController.text.trim(),
     );
 
     if (!mounted) return;
-    if (error == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.check_circle_outline, color: Colors.white),
-              SizedBox(width: 10),
-              Text('Clinic added successfully!'),
-            ],
-          ),
-          backgroundColor: AppTheme.success,
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.white),
+            SizedBox(width: 10),
+            Text('Clinic added successfully!'),
+          ],
         ),
-      );
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error)));
-    }
+        backgroundColor: AppTheme.success,
+      ),
+    );
+    Navigator.pop(context);
   }
 
   @override

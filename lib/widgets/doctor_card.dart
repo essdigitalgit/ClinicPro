@@ -5,14 +5,12 @@ import '../theme/app_theme.dart';
 /// Premium card widget displaying [Doctor] info with specialty badge.
 class DoctorCard extends StatelessWidget {
   final Doctor doctor;
-  final VoidCallback onManageAvailability;
-  final VoidCallback onBookAppointment;
+  final VoidCallback? onEdit;
 
   const DoctorCard({
     super.key,
     required this.doctor,
-    required this.onManageAvailability,
-    required this.onBookAppointment,
+    this.onEdit,
   });
 
   Color _accentColor() {
@@ -44,7 +42,8 @@ class DoctorCard extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: ac.withOpacity(0.12),
+                  color: Color.fromRGBO(
+                    ac.r.toInt(), ac.g.toInt(), ac.b.toInt(), 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(Icons.person_rounded, size: 28, color: ac),
@@ -67,7 +66,8 @@ class DoctorCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: ac.withOpacity(0.1),
+                        color: Color.fromRGBO(
+                            ac.r.toInt(), ac.g.toInt(), ac.b.toInt(), 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -89,31 +89,25 @@ class DoctorCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.schedule_rounded, size: 15),
-                  label: const Text('Availability'),
-                  onPressed: onManageAvailability,
+              if (doctor.phone != null) ...[
+                const Icon(Icons.phone_rounded, size: 14, color: AppTheme.textTertiary),
+                const SizedBox(width: 4),
+                Text(
+                  doctor.phone!,
+                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                ),
+              ],
+              const Spacer(),
+              if (onEdit != null)
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.edit_rounded, size: 14),
+                  label: const Text('Edit'),
+                  onPressed: onEdit,
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    textStyle: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.calendar_today_rounded, size: 15),
-                  label: const Text('Book Appt.'),
-                  onPressed: onBookAppointment,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    textStyle: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
             ],
           ),
         ],

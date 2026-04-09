@@ -5,7 +5,7 @@ class Clinic {
   final String address;
   final String phone;
 
-  Clinic({
+  const Clinic({
     required this.id,
     required this.name,
     required this.address,

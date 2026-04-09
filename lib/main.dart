@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/clinic_provider.dart';
 import 'screens/home_screen.dart';
+import 'screens/schedule_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -13,8 +14,11 @@ class ClinicApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ClinicProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ClinicProvider()),
+        ChangeNotifierProvider(create: (_) => ScheduleProvider()),
+      ],
       child: MaterialApp(
         title: 'ClinicPro',
         debugShowCheckedModeBanner: false,

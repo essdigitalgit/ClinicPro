@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/clinic.dart';
 import '../providers/clinic_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/loading_overlay.dart';
 
-/// Form screen to add a new doctor to a clinic.
+/// Form screen to add a new doctor to the organisation.
 class AddDoctorScreen extends StatefulWidget {
-  final Clinic clinic;
-
-  const AddDoctorScreen({super.key, required this.clinic});
+  const AddDoctorScreen({super.key});
 
   @override
   State<AddDoctorScreen> createState() => _AddDoctorScreenState();
@@ -19,11 +16,15 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _specializationController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
 
   @override
   void dispose() {
     _nameController.dispose();
     _specializationController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -31,10 +32,13 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final provider = context.read<ClinicProvider>();
+    final phone = _phoneController.text.trim();
+    final email = _emailController.text.trim();
     final error = await provider.addDoctor(
       name: _nameController.text.trim(),
       specialization: _specializationController.text.trim(),
-      clinicId: widget.clinic.id,
+      phone: phone.isEmpty ? null : phone,
+      email: email.isEmpty ? null : email,
     );
 
     if (!mounted) return;
@@ -112,43 +116,15 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          'Adding to ${widget.clinic.name}',
-                          style: const TextStyle(
+                        const Text(
+                          'Fill in the details below',
+                          style: TextStyle(
                               fontSize: 13, color: AppTheme.textTertiary),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Clinic badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 11),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.local_hospital_rounded,
-                            size: 16, color: AppTheme.primary),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            widget.clinic.name,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 28),
 
                   // Form card
                   Container(
@@ -190,6 +166,28 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                               (v == null || v.trim().isEmpty)
                                   ? 'Specialization is required'
                                   : null,
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(
+                            labelText: 'Phone (optional)',
+                            hintText: 'e.g. +91 98765 43210',
+                            prefixIcon:
+                                Icon(Icons.phone_rounded, size: 20),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(
+                            labelText: 'Email (optional)',
+                            hintText: 'e.g. doctor@hospital.com',
+                            prefixIcon:
+                                Icon(Icons.email_rounded, size: 20),
+                          ),
                         ),
                       ],
                     ),

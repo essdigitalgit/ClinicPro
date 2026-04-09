@@ -4,7 +4,7 @@ import '../providers/clinic_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/clinic_card.dart';
 import 'add_clinic_screen.dart';
-import 'doctor_list_screen.dart';
+import 'clinic_dashboard_screen.dart';
 
 /// Clinics tab — searchable list of clinics.
 class ClinicListScreen extends StatefulWidget {
@@ -109,17 +109,20 @@ class _ClinicListScreenState extends State<ClinicListScreen> {
                             padding:
                                 const EdgeInsets.fromLTRB(16, 6, 16, 100),
                             itemCount: filtered.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const SizedBox(height: 10),
                             itemBuilder: (context, i) => ClinicCard(
                               clinic: filtered[i],
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      DoctorListScreen(clinic: filtered[i]),
-                                ),
-                              ),
+                              onTap: () {
+                                final p = context.read<ClinicProvider>();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        ClinicDashboardScreen(clinic: filtered[i]),
+                                  ),
+                                ).then((_) => p.loadClinics());
+                              },
                             ),
                           ),
               ),

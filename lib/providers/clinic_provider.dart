@@ -1,76 +1,87 @@
 import 'package:flutter/material.dart';
-import '../models/appointment.dart';
+import 'package:uuid/uuid.dart';
 import '../models/clinic.dart';
 import '../models/doctor.dart';
-import '../models/availability.dart';
-import '../models/time_slot.dart';
+import '../models/clinic_slot.dart';
+import '../models/doctor_assignment.dart';
+import '../models/appointment.dart';
 import '../services/mock_data_service.dart';
 
-/// Central state provider for the clinic management app.
-/// Uses [ChangeNotifier] so widgets rebuild on state changes.
 class ClinicProvider extends ChangeNotifier {
+  static const _uuid = Uuid();
   final MockDataService _service = MockDataService();
 
-  // ─── Clinics ───────────────────────────────────────────────────────────────
+  // ── State ──────────────────────────────────────────────────────────────────
   List<Clinic> _clinics = [];
-  List<Clinic> get clinics => _clinics;
-
-  // ─── Doctors ──────────────────────────────────────────────────────────────
   List<Doctor> _doctors = [];
-  List<Doctor> get doctors => _doctors;
+  List<ClinicSlot> _slots = [];
+  List<DoctorAssignment> _assignments = [];
+  List<Appointment> _appointments = [];
+  List<BookingOption> _bookingOptions = [];
 
-  // ─── Availabilities ───────────────────────────────────────────────────────
-  List<Availability> _availabilities = [];
-  List<Availability> get availabilities => _availabilities;
-
-  // ─── Time slots ───────────────────────────────────────────────────────────
-  List<TimeSlot> _timeSlots = [];
-  List<TimeSlot> get timeSlots => _timeSlots;
-
-  // ─── Loading flags ────────────────────────────────────────────────────────
   bool _loadingClinics = false;
   bool _loadingDoctors = false;
-  bool _loadingAvailability = false;
   bool _loadingSlots = false;
+  bool _loadingAssignments = false;
+  bool _loadingBooking = false;
   bool _submitting = false;
-  bool _loadingStats = false;
+  String? _error;
+
+  // ── Getters ────────────────────────────────────────────────────────────────
+  List<Clinic> get clinics => _clinics;
+  List<Doctor> get doctors => _doctors;
+  List<ClinicSlot> get slots => _slots;
+  List<DoctorAssignment> get assignments => _assignments;
+  List<Appointment> get appointments => _appointments;
+  List<BookingOption> get bookingOptions => _bookingOptions;
 
   bool get loadingClinics => _loadingClinics;
   bool get loadingDoctors => _loadingDoctors;
-  bool get loadingAvailability => _loadingAvailability;
   bool get loadingSlots => _loadingSlots;
+  bool get loadingAssignments => _loadingAssignments;
+  bool get loadingBooking => _loadingBooking;
   bool get submitting => _submitting;
-  bool get loadingStats => _loadingStats;
+  String? get error => _error;
 
-  // ─── Dashboard stats ──────────────────────────────────────────────────────
-  List<Doctor> _allDoctors = [];
-  List<Appointment> _appointments = [];
-
-  int get allDoctorCount => _allDoctors.length;
+  int get clinicCount => _clinics.length;
+  int get doctorCount => _doctors.length;
   int get appointmentCount => _appointments.length;
 
+  // ── Dashboard / bulk load ─────────────────────────────────────────────────
   Future<void> loadDashboardStats() async {
-    _loadingStats = true;
+    _loadingClinics = true;
+    _error = null;
     notifyListeners();
-    _clinics = await _service.getClinics();
-    _allDoctors = await _service.getAllDoctors();
-    _appointments = await _service.getAllAppointments();
-    _loadingStats = false;
-    notifyListeners();
+    try {
+      await Future.wait([
+        _service.getClinics().then((v) => _clinics = v),
+        _service.getDoctors().then((v) => _doctors = v),
+        _service.getAppointments().then((v) => _appointments = v),
+      ]);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _loadingClinics = false;
+      notifyListeners();
+    }
   }
 
-  // ─── Clinic methods ────────────────────────────────────────────────────────
-
+  // ── Clinics ────────────────────────────────────────────────────────────────
   Future<void> loadClinics() async {
     _loadingClinics = true;
+    _error = null;
     notifyListeners();
-    _clinics = await _service.getClinics();
-    _loadingClinics = false;
-    notifyListeners();
+    try {
+      _clinics = await _service.getClinics();
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _loadingClinics = false;
+      notifyListeners();
+    }
   }
 
-  /// Returns null on success, or an error message.
-  Future<String?> addClinic({
+  Future<void> addClinic({
     required String name,
     required String address,
     required String phone,
@@ -78,41 +89,63 @@ class ClinicProvider extends ChangeNotifier {
     _submitting = true;
     notifyListeners();
     try {
-      await _service.addClinic(name: name, address: address, phone: phone);
-      await loadClinics();
-      return null;
-    } catch (e) {
-      return e.toString();
+      await _service.addClinic(Clinic(
+        id: _uuid.v4(),
+        name: name,
+        address: address,
+        phone: phone,
+      ));
+      _clinics = await _service.getClinics();
     } finally {
       _submitting = false;
       notifyListeners();
     }
   }
 
-  // ─── Doctor methods ────────────────────────────────────────────────────────
+  Future<void> updateClinic(Clinic clinic) async {
+    _submitting = true;
+    notifyListeners();
+    try {
+      await _service.updateClinic(clinic);
+      _clinics = await _service.getClinics();
+    } finally {
+      _submitting = false;
+      notifyListeners();
+    }
+  }
 
-  Future<void> loadDoctors(String clinicId) async {
+  // ── Doctors ────────────────────────────────────────────────────────────────
+  Future<void> loadDoctors() async {
     _loadingDoctors = true;
+    _error = null;
     notifyListeners();
-    _doctors = await _service.getDoctorsByClinic(clinicId);
-    _loadingDoctors = false;
-    notifyListeners();
+    try {
+      _doctors = await _service.getDoctors();
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _loadingDoctors = false;
+      notifyListeners();
+    }
   }
 
   Future<String?> addDoctor({
     required String name,
     required String specialization,
-    required String clinicId,
+    String? phone,
+    String? email,
   }) async {
     _submitting = true;
     notifyListeners();
     try {
-      await _service.addDoctor(
+      await _service.addDoctor(Doctor(
+        id: _uuid.v4(),
         name: name,
         specialization: specialization,
-        clinicId: clinicId,
-      );
-      await loadDoctors(clinicId);
+        phone: phone?.isEmpty == true ? null : phone,
+        email: email?.isEmpty == true ? null : email,
+      ));
+      _doctors = await _service.getDoctors();
       return null;
     } catch (e) {
       return e.toString();
@@ -122,77 +155,207 @@ class ClinicProvider extends ChangeNotifier {
     }
   }
 
-  // ─── Availability methods ──────────────────────────────────────────────────
-
-  Future<void> loadAvailability(String doctorId) async {
-    _loadingAvailability = true;
+  Future<String?> updateDoctor(Doctor doctor) async {
+    _submitting = true;
     notifyListeners();
-    _availabilities = await _service.getAvailabilityByDoctor(doctorId);
-    _loadingAvailability = false;
-    notifyListeners();
+    try {
+      await _service.updateDoctor(doctor);
+      _doctors = await _service.getDoctors();
+      return null;
+    } catch (e) {
+      return e.toString();
+    } finally {
+      _submitting = false;
+      notifyListeners();
+    }
   }
 
-  /// Returns null on success, or a validation/overlap error message.
-  Future<String?> addAvailability({
-    required String doctorId,
+  // ── Clinic Slots ───────────────────────────────────────────────────────────
+  Future<void> loadSlots(String clinicId) async {
+    _loadingSlots = true;
+    _error = null;
+    notifyListeners();
+    try {
+      _slots = await _service.getSlotsByClinic(clinicId);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _loadingSlots = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> addClinicSlot({
+    required String clinicId,
     required int dayOfWeek,
     required TimeOfDay startTime,
     required TimeOfDay endTime,
+    String? label,
   }) async {
     _submitting = true;
     notifyListeners();
-    final error = await _service.addAvailability(
-      doctorId: doctorId,
-      dayOfWeek: dayOfWeek,
-      startTime: startTime,
-      endTime: endTime,
-    );
-    if (error == null) {
-      await loadAvailability(doctorId);
+    try {
+      final err = await _service.addClinicSlot(
+        clinicId: clinicId,
+        dayOfWeek: dayOfWeek,
+        startTime: startTime,
+        endTime: endTime,
+        label: label,
+      );
+      if (err == null) _slots = await _service.getSlotsByClinic(clinicId);
+      return err;
+    } finally {
+      _submitting = false;
+      notifyListeners();
     }
-    _submitting = false;
-    notifyListeners();
-    return error;
   }
 
-  // ─── Time-slot / booking methods ──────────────────────────────────────────
-
-  Future<void> loadAvailableSlots(String doctorId, DateTime date) async {
-    _loadingSlots = true;
-    _timeSlots = [];
+  Future<void> deleteClinicSlot(String slotId, String clinicId) async {
+    _submitting = true;
     notifyListeners();
-    _timeSlots = await _service.getAvailableSlots(doctorId, date);
-    _loadingSlots = false;
-    notifyListeners();
+    try {
+      await _service.deleteClinicSlot(slotId);
+      _slots = await _service.getSlotsByClinic(clinicId);
+      _assignments = await _service.getAssignmentsByClinic(clinicId);
+    } finally {
+      _submitting = false;
+      notifyListeners();
+    }
   }
 
-  void clearTimeSlots() {
-    _timeSlots = [];
+  // ── Assignments ────────────────────────────────────────────────────────────
+  Future<void> loadAssignments(String clinicId) async {
+    _loadingAssignments = true;
+    _error = null;
     notifyListeners();
+    try {
+      _assignments = await _service.getAssignmentsByClinic(clinicId);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _loadingAssignments = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> saveAssignment(DoctorAssignment assignment) async {
+    _submitting = true;
+    notifyListeners();
+    try {
+      final err = await _service.saveAssignment(assignment);
+      if (err == null) {
+        _assignments = await _service.getAssignmentsByClinic(assignment.clinicId);
+      }
+      return err;
+    } finally {
+      _submitting = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeDoctorAssignment(
+      String assignmentId, String clinicId) async {
+    _submitting = true;
+    notifyListeners();
+    try {
+      await _service.removeDoctorAssignment(assignmentId);
+      _assignments = await _service.getAssignmentsByClinic(clinicId);
+    } finally {
+      _submitting = false;
+      notifyListeners();
+    }
+  }
+
+  // ── Doctor schedule (cross-clinic) ────────────────────────────────────
+  List<DoctorAssignment> _doctorSchedule = [];
+  bool _loadingDoctorSchedule = false;
+
+  List<DoctorAssignment> get doctorSchedule => _doctorSchedule;
+  bool get loadingDoctorSchedule => _loadingDoctorSchedule;
+
+  Future<void> loadDoctorSchedule(String doctorId) async {
+    _loadingDoctorSchedule = true;
+    notifyListeners();
+    try {
+      _doctorSchedule = await _service.getAssignmentsByDoctor(doctorId);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _loadingDoctorSchedule = false;
+      notifyListeners();
+    }
+  }
+
+  /// Check if [doctorId] has a conflicting permanent assignment on [dayOfWeek]
+  /// that overlaps with [start]–[end].
+  bool isDoctorBusy(String doctorId, int dayOfWeek, TimeOfDay start, TimeOfDay end) {
+    final startMin = start.hour * 60 + start.minute;
+    final endMin = end.hour * 60 + end.minute;
+    for (final a in _doctorSchedule) {
+      if (a.doctorId != doctorId) continue;
+      final slot = _service.getSlotById(a.slotId);
+      if (slot == null) continue;
+      if (slot.dayOfWeek != dayOfWeek) continue;
+      final sStart = slot.startTime.hour * 60 + slot.startTime.minute;
+      final sEnd = slot.endTime.hour * 60 + slot.endTime.minute;
+      if (startMin < sEnd && endMin > sStart) return true;
+    }
+    return false;
+  }
+
+  // ── Appointments / Booking ─────────────────────────────────────────────────
+  Future<void> loadAppointments({String? clinicId}) async {
+    _loadingClinics = true;
+    notifyListeners();
+    try {
+      _appointments = await _service.getAppointments(clinicId: clinicId);
+    } finally {
+      _loadingClinics = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadBookingOptions({
+    required String clinicId,
+    required DateTime date,
+  }) async {
+    _loadingBooking = true;
+    notifyListeners();
+    try {
+      _bookingOptions = await _service.getAvailableBookingOptions(
+        clinicId: clinicId,
+        date: date,
+      );
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _loadingBooking = false;
+      notifyListeners();
+    }
   }
 
   Future<String?> bookAppointment({
     required String clinicId,
     required String doctorId,
+    required String slotId,
     required String patientName,
     required DateTime date,
-    required TimeOfDay startTime,
+    required TimeOfDay time,
   }) async {
     _submitting = true;
     notifyListeners();
-    final error = await _service.bookAppointment(
-      clinicId: clinicId,
-      doctorId: doctorId,
-      patientName: patientName,
-      date: date,
-      startTime: startTime,
-    );
-    // Refresh slots after booking so the booked slot disappears
-    if (error == null) {
-      await loadAvailableSlots(doctorId, date);
+    try {
+      return await _service.bookAppointment(
+        clinicId: clinicId,
+        doctorId: doctorId,
+        slotId: slotId,
+        patientName: patientName,
+        date: date,
+        time: time,
+      );
+    } finally {
+      _submitting = false;
+      notifyListeners();
     }
-    _submitting = false;
-    notifyListeners();
-    return error;
   }
 }

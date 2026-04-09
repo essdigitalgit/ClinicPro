@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 
-/// Represents a booked appointment.
+/// A patient appointment booked against a [ClinicSlot] with an assigned doctor.
 class Appointment {
   final String id;
   final String clinicId;
   final String doctorId;
+  final String slotId;
   final String patientName;
-  final DateTime date;
-  final TimeOfDay startTime;
-  final TimeOfDay endTime;
+  final DateTime appointmentDate;
+  final TimeOfDay appointmentTime;
+  final String status; // 'confirmed' | 'cancelled' | 'completed'
 
-  Appointment({
+  const Appointment({
     required this.id,
     required this.clinicId,
     required this.doctorId,
+    required this.slotId,
     required this.patientName,
-    required this.date,
-    required this.startTime,
-    required this.endTime,
+    required this.appointmentDate,
+    required this.appointmentTime,
+    this.status = 'confirmed',
   });
 }

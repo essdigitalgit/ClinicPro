@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/clinic.dart';
 import '../providers/clinic_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/doctor_card.dart';
 import 'add_doctor_screen.dart';
-import 'availability_screen.dart';
-import 'appointment_booking_screen.dart';
 
-/// Screen listing all doctors for a given [clinic].
+/// Standalone screen listing all doctors across the organisation.
 class DoctorListScreen extends StatefulWidget {
-  final Clinic clinic;
-
-  const DoctorListScreen({super.key, required this.clinic});
+  const DoctorListScreen({super.key});
 
   @override
   State<DoctorListScreen> createState() => _DoctorListScreenState();
@@ -23,7 +18,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ClinicProvider>().loadDoctors(widget.clinic.id);
+      context.read<ClinicProvider>().loadDoctors();
     });
   }
 
@@ -33,24 +28,10 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         backgroundColor: AppTheme.surface,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Doctors',
-                style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700)),
-            Text(
-              widget.clinic.name,
-              style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textTertiary,
-                  fontWeight: FontWeight.w400),
-            ),
-          ],
+        automaticallyImplyLeading: false,
+        title: const Text(
+          'Doctors',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
       ),
       body: Consumer<ClinicProvider>(
@@ -60,38 +41,23 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
           }
           if (provider.doctors.isEmpty) {
             return _EmptyDoctors(
-              onAdd: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        AddDoctorScreen(clinic: widget.clinic)),
-              ),
+              onAdd: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddDoctorScreen()),
+                );
+                if (context.mounted) {
+                  context.read<ClinicProvider>().loadDoctors();
+                }
+              },
             );
           }
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
             itemCount: provider.doctors.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, i) {
-              final doctor = provider.doctors[i];
-              return DoctorCard(
-                doctor: doctor,
-                onManageAvailability: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) =>
-                          AvailabilityScreen(doctor: doctor)),
-                ),
-                onBookAppointment: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AppointmentBookingScreen(
-                      initialClinic: widget.clinic,
-                      initialDoctor: doctor,
-                    ),
-                  ),
-                ),
-              );
+              return DoctorCard(doctor: provider.doctors[i]);
             },
           );
         },
@@ -100,10 +66,11 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
         onPressed: () async {
           await Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) =>
-                    AddDoctorScreen(clinic: widget.clinic)),
+            MaterialPageRoute(builder: (_) => const AddDoctorScreen()),
           );
+          if (context.mounted) {
+            context.read<ClinicProvider>().loadDoctors();
+          }
         },
         icon: const Icon(Icons.person_add_rounded),
         label: const Text('Add Doctor'),
@@ -145,9 +112,8 @@ class _EmptyDoctors extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Add doctors to this clinic to start managing appointments',
-              style:
-                  TextStyle(fontSize: 13, color: AppTheme.textTertiary),
+              'Add doctors to start assigning them to clinic slots',
+              style: TextStyle(fontSize: 13, color: AppTheme.textTertiary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -162,3 +128,4 @@ class _EmptyDoctors extends StatelessWidget {
     );
   }
 }
+

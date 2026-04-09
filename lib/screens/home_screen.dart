@@ -9,9 +9,11 @@ import 'clinic_list_screen.dart';
 import 'add_clinic_screen.dart';
 import 'add_doctor_screen.dart';
 import 'appointment_booking_screen.dart';
+import 'clinic_dashboard_screen.dart';
 import 'doctor_list_screen.dart';
+import 'schedule_screen.dart';
 
-/// Root shell with bottom navigation: Home · Clinics · Book.
+/// Root shell with bottom navigation: Home · Schedule · Doctors · Book.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -31,7 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _tabIndex,
         children: [
           _DashboardTab(onTabSwitch: _switchTab),
-          const ClinicListScreen(),
+          const ScheduleScreen(),
+          const DoctorListScreen(),
           const AppointmentBookingScreen(),
         ],
       ),
@@ -68,6 +71,7 @@ class _BottomNav extends StatelessWidget {
       child: BottomNavigationBar(
         currentIndex: currentIndex,
         onTap: onTap,
+        type: BottomNavigationBarType.fixed,
         elevation: 0,
         backgroundColor: Colors.transparent,
         selectedItemColor: AppTheme.primary,
@@ -82,13 +86,18 @@ class _BottomNav extends StatelessWidget {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.local_hospital_outlined),
-            activeIcon: Icon(Icons.local_hospital_rounded),
-            label: 'Clinics',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.calendar_month_outlined),
             activeIcon: Icon(Icons.calendar_month_rounded),
+            label: 'Schedule',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_outline_rounded),
+            activeIcon: Icon(Icons.people_rounded),
+            label: 'Doctors',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bookmark_add_outlined),
+            activeIcon: Icon(Icons.bookmark_added_rounded),
             label: 'Book',
           ),
         ],
@@ -246,7 +255,7 @@ class _DashboardTabState extends State<_DashboardTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
@@ -264,7 +273,7 @@ class _DashboardTabState extends State<_DashboardTab> {
             width: 68,
             height: 68,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Icon(Icons.medical_services_rounded,
@@ -292,7 +301,7 @@ class _DashboardTabState extends State<_DashboardTab> {
             Expanded(
               child: StatCard(
                 label: 'Clinics',
-                count: provider.loadingStats ? null : provider.clinics.length,
+                count: provider.loadingClinics ? null : provider.clinics.length,
                 icon: Icons.local_hospital_rounded,
                 color: AppTheme.primary,
                 bgColor: AppTheme.primaryContainer,
@@ -303,7 +312,7 @@ class _DashboardTabState extends State<_DashboardTab> {
               child: StatCard(
                 label: 'Doctors',
                 count:
-                    provider.loadingStats ? null : provider.allDoctorCount,
+                    provider.loadingClinics ? null : provider.doctorCount,
                 icon: Icons.people_rounded,
                 color: const Color(0xFF059669),
                 bgColor: const Color(0xFFD1FAE5),
@@ -314,7 +323,7 @@ class _DashboardTabState extends State<_DashboardTab> {
               child: StatCard(
                 label: 'Bookings',
                 count:
-                    provider.loadingStats ? null : provider.appointmentCount,
+                    provider.loadingClinics ? null : provider.appointmentCount,
                 icon: Icons.calendar_month_rounded,
                 color: const Color(0xFF7C3AED),
                 bgColor: const Color(0xFFEDE9FE),
@@ -359,32 +368,22 @@ class _DashboardTabState extends State<_DashboardTab> {
                 label: 'Add\nDoctor',
                 color: const Color(0xFF059669),
                 bgColor: const Color(0xFFD1FAE5),
-                onTap: () {
-                  if (provider.clinics.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Add a clinic first.')),
-                    );
-                    return;
-                  }
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          AddDoctorScreen(clinic: provider.clinics.first),
-                    ),
-                  );
-                },
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AddDoctorScreen(),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: _ActionTile(
-                icon: Icons.calendar_today_rounded,
-                label: 'Book\nAppointment',
+                icon: Icons.calendar_month_rounded,
+                label: 'Schedule\nDoctor',
                 color: const Color(0xFF7C3AED),
                 bgColor: const Color(0xFFEDE9FE),
-                onTap: () => widget.onTabSwitch(2),
+                onTap: () => widget.onTabSwitch(1),
               ),
             ),
           ],
@@ -410,7 +409,11 @@ class _DashboardTabState extends State<_DashboardTab> {
                   color: AppTheme.textPrimary),
             ),
             TextButton(
-              onPressed: () => widget.onTabSwitch(1),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const ClinicListScreen()),
+              ),
               style: TextButton.styleFrom(
                 foregroundColor: AppTheme.primary,
                 padding:
@@ -430,7 +433,20 @@ class _DashboardTabState extends State<_DashboardTab> {
           ],
         ),
         const SizedBox(height: 10),
-        if (provider.loadingStats)
+        // Prominent Add Clinic card
+        _AddClinicBanner(
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddClinicScreen()),
+            );
+            if (context.mounted) {
+              context.read<ClinicProvider>().loadDashboardStats();
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        if (provider.loadingClinics)
           const Center(
             child: Padding(
               padding: EdgeInsets.all(24),
@@ -453,7 +469,7 @@ class _DashboardTabState extends State<_DashboardTab> {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => DoctorListScreen(clinic: c)),
+                      builder: (_) => ClinicDashboardScreen(clinic: c)),
                 ),
               ),
             ),
@@ -490,7 +506,7 @@ class _ActionTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.2), width: 1),
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -499,7 +515,7 @@ class _ActionTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, size: 22, color: color),
@@ -635,6 +651,69 @@ class _EmptyDashboard extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AddClinicBanner extends StatelessWidget {
+  final VoidCallback onTap;
+  const _AddClinicBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: AppTheme.primary.withValues(alpha: 0.25), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                gradient: AppTheme.softGradient,
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(Icons.add_business_rounded,
+                  color: AppTheme.primary, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Add New Clinic',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary)),
+                  SizedBox(height: 2),
+                  Text('Register a clinic to start scheduling',
+                      style: TextStyle(
+                          fontSize: 12, color: AppTheme.textTertiary)),
+                ],
+              ),
+            ),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.add_rounded,
+                  size: 16, color: AppTheme.primary),
+            ),
+          ],
+        ),
       ),
     );
   }

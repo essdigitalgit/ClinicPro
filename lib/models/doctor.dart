@@ -1,15 +1,17 @@
-/// Represents a doctor linked to a specific clinic.
+/// An independently onboarded doctor — not linked to any clinic at creation.
 class Doctor {
   final String id;
   final String name;
   final String specialization;
-  final String clinicId;
+  final String? phone;
+  final String? email;
 
-  Doctor({
+  const Doctor({
     required this.id,
     required this.name,
     required this.specialization,
-    required this.clinicId,
+    this.phone,
+    this.email,
   });
 
   @override
